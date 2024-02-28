@@ -11,7 +11,6 @@ library(rvest)
 library(PL94171)
 library(tinytiger)
 library(censable)
-library(geomander)
 
 state <- 'NY'
 
@@ -238,6 +237,8 @@ out |>
 
 validate <- FALSE
 if (validate) {
+  library(geomander)
+  
   blks <- build_dec(geography = 'block', state = state)
   
   blks <- blks |> 
@@ -257,3 +258,62 @@ if (validate) {
   blks$district[adj[[6196]]]
   blks$district[adj[[6197]]]
 }
+
+make_plots <- FALSE
+if (make_plots) {
+  library(ggredist)
+  library(redist)
+  library(alarmdata)
+  
+  blks <- blks |> 
+    st_transform(3857)
+  
+  p <- blks |> 
+    ggplot() +
+    geom_district(aes(group = district)) +
+    geom_district_text(aes(label = district, group = district)) +
+    scale_fill_washington() +
+    theme_map()
+  
+  ggsave(here('data/A09310.png'), p, width = 12, height = 12, dpi = 300)
+  
+  
+  # fifty-states -----
+  map <- alarm_50state_map(state)
+  plans <- alarm_50state_plans(state)
+  plans <- plans |> 
+    alarm_add_plan(ref_plan = out |> rename(A09310 = district), map = map, name = 'A09310', calc_polsby = TRUE)
+  
+  # helper from 50states
+  lbl_party <- function(x) {
+    if_else(x == 0.5, "Even",
+      paste0(if_else(x < 0.5, "R+", "D+"), scales::number(200 * abs(x - 0.5), 1))
+    )
+  }
+  
+  
+  set.seed(123)
+  redist.plot.distr_qtys(plans, e_dvs,
+                         color_thresh = 0.5,
+                         size = 0.04 - sqrt(8) / 250, alpha = 0.4
+  ) +
+    geom_hline(yintercept = 0.5, color = '#00000055', size = 0.5) +
+    scale_y_continuous('Two-party vote margin', labels = lbl_party) +
+    labs(x = 'Simulated districts, ordered by Democratic vote margin') +
+    annotate('text',
+             x = 1.5, y = min(plans$e_dvs[seq_len(26)]),
+             label = 'A09310', hjust = 0.05, size = 3.5,
+             color = '#A09310'
+    ) +
+    annotate('text',
+             x = 3.5, y = sort(plans$e_dvs[27:52])[3],
+             label = 'CD 2020', hjust = -0.05, size = 3.5,
+             color = 'black'
+    ) +
+    scale_color_manual(values = c('#A09310', 'black', ggredist$partisan[2], ggredist$partisan[14]),
+                       labels = c('pt', 'Rep.', 'Dem.'), guide = 'none') +
+    theme_bw()
+  
+  ggsave(here('data/A09310_e_dvs.png'), p, width = 12, height = 12, dpi = 300)
+}
+
