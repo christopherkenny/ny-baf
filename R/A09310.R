@@ -11,7 +11,7 @@ library(rvest)
 library(PL94171)
 library(tinytiger)
 library(censable)
-
+library(geomander)
 
 state <- 'NY'
 
@@ -242,4 +242,11 @@ if (validate) {
   
   blks <- blks |> 
     left_join(out, by = 'GEOID')
+  
+  # check pops ----
+  blks |> as_tibble() |> group_by(district) |> summarize(pop = sum(pop)) |> pull(pop) |> summary()
+  
+  # check contiguity ----
+  adj <- adjacency(blks)
+  cont <- check_contiguity(adj, blks$district)
 }
