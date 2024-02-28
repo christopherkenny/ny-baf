@@ -281,8 +281,13 @@ if (make_plots) {
   # fifty-states -----
   map <- alarm_50state_map(state)
   plans <- alarm_50state_plans(state)
+  
+  comm_plan <- readxl::read_excel('data-raw/congressional_plan_equivalency.xlsx') |> 
+    rename(GEOID = Block,
+           commission2024 = `DistrictID:1`)
   plans <- plans |> 
-    alarm_add_plan(ref_plan = out |> rename(A09310 = district), map = map, name = 'A09310', calc_polsby = TRUE)
+    alarm_add_plan(ref_plan = out |> rename(A09310 = district), map = map, name = 'A09310', calc_polsby = TRUE) |> 
+    alarm_add_plan(ref_plan = comm_plan, map = map, name = 'commission2024', calc_polsby = TRUE)
   
   # helper from 50states
   lbl_party <- function(x) {
@@ -291,27 +296,43 @@ if (make_plots) {
     )
   }
   
+  r_geom <- function(...) {
+    ggplot2::geom_point(
+      ggplot2::aes(x = as.integer(.data$.distr_no),
+                   y = e_dvs,
+                   color = .data$draw, 
+                   shape = .data$draw),
+      ...
+    )
+  }
   
   set.seed(123)
   redist.plot.distr_qtys(plans, e_dvs,
                          color_thresh = 0.5,
-                         size = 0.04 - sqrt(8) / 250, alpha = 0.4
+                         size = 0.04 - sqrt(8) / 250, alpha = 0.4,
+                         ref_geom = r_geom
   ) +
     geom_hline(yintercept = 0.5, color = '#00000055', size = 0.5) +
     scale_y_continuous('Two-party vote margin', labels = lbl_party) +
     labs(x = 'Simulated districts, ordered by Democratic vote margin') +
     annotate('text',
-             x = 1.5, y = min(plans$e_dvs[seq_len(26)]),
+             x = 1.5, y = min(plans$e_dvs[27:52]),
              label = 'A09310', hjust = 0.05, size = 3.5,
              color = '#A09310'
     ) +
     annotate('text',
-             x = 3.5, y = sort(plans$e_dvs[27:52])[3],
-             label = 'CD 2020', hjust = -0.05, size = 3.5,
+             x = 3.5, y = sort(plans$e_dvs[53:78])[3],
+             label = 'Cervas', hjust = -0.05, size = 3.5,
              color = 'black'
+    ) + 
+    annotate('text',
+             x = 3.5, y = sort(plans$e_dvs[1:26])[3],
+             label = 'Commission 2024', hjust = -0.05, size = 3.5,
+             color = '#52796F'
     ) +
-    scale_color_manual(values = c('#A09310', 'black', ggredist$partisan[2], ggredist$partisan[14]),
+    scale_color_manual(values = c('#52796F', '#A09310', 'black', ggredist$partisan[2], ggredist$partisan[14]),
                        labels = c('pt', 'Rep.', 'Dem.'), guide = 'none') +
+    scale_shape_manual(values = c(16, 17, 18), guide = 'none') +
     theme_bw()
   
   ggsave(here('data/A09310_e_dvs.png'), width = 10, height = 6, dpi = 300)
