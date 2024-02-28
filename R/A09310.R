@@ -314,6 +314,6 @@ if (make_plots) {
                        labels = c('pt', 'Rep.', 'Dem.'), guide = 'none') +
     theme_bw()
   
-  ggsave(here('data/A09310_e_dvs.png'), p, width = 12, height = 12, dpi = 300)
+  ggsave(here('data/A09310_e_dvs.png'), width = 10, height = 6, dpi = 300)
 }
 
