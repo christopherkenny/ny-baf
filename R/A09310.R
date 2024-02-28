@@ -249,4 +249,11 @@ if (validate) {
   # check contiguity ----
   adj <- adjacency(blks)
   cont <- check_contiguity(adj, blks$district)
+  
+  # two disconnected blocks w/ 0 pop and no neighbors
+  blks |> 
+    slice(which(cont$component > 1))
+  
+  blks$district[adj[[6196]]]
+  blks$district[adj[[6197]]]
 }
