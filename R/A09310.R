@@ -126,8 +126,8 @@ cli::cli_inform('whole counties account for {round(100 * sum(!is.na(target$distr
 whole_town_fips <- whole_town |> 
   mutate(
     town_name = str_remove(text, 'All of '),
-    town_name = str_replace(town_name, 'LaGrange', 'La Grange'),
-    town_name = str_replace(town_name, 'St. Johnsville', 'St Johnsville'),
+    town_name = str_replace(town_name, 'Tuscarora Reservation', 'Tuscarora Nation Reservation'),
+    town_name = str_replace(town_name, 'Prattsburg town', 'Prattsburgh town'),
     town_name = str_squish(town_name)
   ) |> 
   select(town_name, county_name, district) |> 
@@ -136,7 +136,7 @@ whole_town_fips <- whole_town |>
   left_join(town_lookup |> mutate(county_fips = str_sub(town_fips, 1, 5)), by = c('town_name', 'county_fips'))
 
 town_baf <- mcd |> 
-  left_join(whole_town_fips, by = c('mcd_fips' = 'town_fips'), relationship = 'many-to-many') |>
+  left_join(whole_town_fips, by = c('mcd_fips' = 'town_fips')) |>
   filter(!is.na(district)) |> 
   select(block_fips, district)
 
@@ -214,5 +214,32 @@ target <- target |>
   rows_patch(whole_tracts_all, by = c('tract_fips')) |> 
   rows_patch(part_tracts, by = c('block_fips'))
 
+cli::cli_inform('tracts increase to {round(100 * sum(!is.na(target$district)) / nrow(target), 1)}% of blocks')
+
+
+lakes <- whole_town_fips |> 
+  filter(is.na(town_fips)) |> 
+  select(county_fips, district)
+
+target <- target |> 
+  rows_patch(lakes, by = 'county_fips')
 
 cli::cli_inform('tracts increase to {round(100 * sum(!is.na(target$district)) / nrow(target), 1)}% of blocks')
+
+# write out to file ----
+out <- target |> 
+  select(
+    GEOID = block_fips, district
+  ) 
+
+out |> 
+  write_csv(here('data/A09310.csv'))
+
+
+validate <- FALSE
+if (validate) {
+  blks <- build_dec(geography = 'block', state = state)
+  
+  blks <- blks |> 
+    left_join(out, by = 'GEOID')
+}
